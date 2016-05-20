@@ -28,6 +28,7 @@ import "sort"
 import "strconv"
 import "strings"
 import "time"
+import "encoding/binary"
 
 import "github.com/miekg/dns"
 import "github.com/golang/protobuf/proto"
@@ -121,6 +122,7 @@ func (o *StatOutput) RunOutputLoop() {
 	var cq, cr, rq, rr int
 	var cr_d_ok, cr_d_no, cr_tc int
 
+	cq_sz := make(map[string] int)
 	cq_src := make(map[string] int)
 	cq_name := make(map[string] int)
 	cq_name_p := make(map[string] int)
@@ -128,6 +130,7 @@ func (o *StatOutput) RunOutputLoop() {
 	cq_any_name := make(map[string] int)
 	cq_any_name_p := make(map[string] int)
 
+	cr_sz := make(map[string] int)
 	cr_rcode := make(map[string] int)
 	cr_servfail_src := make(map[string] int)
 	cr_servfail_name := make(map[string] int)
@@ -168,6 +171,9 @@ func (o *StatOutput) RunOutputLoop() {
 
 		case Message_CLIENT_QUERY:
 			cq++
+
+			sz := fmt.Sprintf("%04d", (binary.Size(m.QueryMessage)/50)*50 + 50)
+			cq_sz[sz]++
 
 			qa := net.IP(m.QueryAddress).String()
 			cq_src[qa]++
@@ -217,6 +223,9 @@ func (o *StatOutput) RunOutputLoop() {
 
 		case Message_CLIENT_RESPONSE:
 			cr++
+
+			sz := fmt.Sprintf("%04d", (binary.Size(m.ResponseMessage)/50)*50 + 50)
+			cr_sz[sz]++
 
 			msg := new(dns.Msg)
 			err := msg.Unpack(m.ResponseMessage)
@@ -391,41 +400,39 @@ func (o *StatOutput) RunOutputLoop() {
 
 	var b *bytes.Buffer
 
+	b = ReportStats("client_query.size", &cq_sz, 0)
+	o.writer.Write(b.Bytes())
 	b = ReportStats("client_query.src", &cq_src, 120)
 	o.writer.Write(b.Bytes())
-
 	b = ReportStats("client_query.name", &cq_name, 120)
 	o.writer.Write(b.Bytes())
 	b = ReportStats("client_query.name_parent", &cq_name_p, 120)
 	o.writer.Write(b.Bytes())
+	b = ReportStats("client_query.any.src", &cq_any_src, 120)
+	o.writer.Write(b.Bytes())
+	b = ReportStats("client_query.any.name", &cq_any_name, 120)
+	o.writer.Write(b.Bytes())
+	b = ReportStats("client_query.any.name_parent", &cq_any_name_p, 120)
+	o.writer.Write(b.Bytes())
 
-	b = ReportStats("client_query.any.src", &cq_any_src, 60)
+	b = ReportStats("client_response.size", &cr_sz, 0)
 	o.writer.Write(b.Bytes())
-	b = ReportStats("client_query.any.name", &cq_any_name, 30)
-	o.writer.Write(b.Bytes())
-	b = ReportStats("client_query.any.name_parent", &cq_any_name_p, 30)
-	o.writer.Write(b.Bytes())
-
 	b = ReportStats("client_response.rcode", &cr_rcode, 0)
 	o.writer.Write(b.Bytes())
-
 	b = ReportStats("client_response.tc.src", &cr_tc_src, 60)
 	o.writer.Write(b.Bytes())
-
 	b = ReportStats("client_response.servfail.src", &cr_servfail_src, 60)
 	o.writer.Write(b.Bytes())
 	b = ReportStats("client_response.servfail.name", &cr_servfail_name, 60)
 	o.writer.Write(b.Bytes())
 	b = ReportStats("client_response.servfail.name_parent", &cr_servfail_name_p, 60)
 	o.writer.Write(b.Bytes())
-
-	b = ReportStats("client_response.nxdomain.src", &cr_nxdomain_src, 30)
+	b = ReportStats("client_response.nxdomain.src", &cr_nxdomain_src, 60)
 	o.writer.Write(b.Bytes())
 	b = ReportStats("client_response.nxdomain.name", &cr_nxdomain_name, 60)
 	o.writer.Write(b.Bytes())
 	b = ReportStats("client_response.nxdomain.name_p", &cr_nxdomain_name_p, 60)
 	o.writer.Write(b.Bytes())
-
 	b = ReportStats("client_response.slow.src", &cr_slow_src, 30)
 	o.writer.Write(b.Bytes())
 	b = ReportStats("client_response.slow.name", &cr_slow_name, 30)
@@ -433,9 +440,9 @@ func (o *StatOutput) RunOutputLoop() {
 	b = ReportStats("client_response.slow.name_parent", &cr_slow_name_p, 30)
 	o.writer.Write(b.Bytes())
 
-	b = ReportStats("resolver_query.zone", &rq_zone, 120)
+	b = ReportStats("resolver_query.zone", &rq_zone, 240)
 	o.writer.Write(b.Bytes())
-	b = ReportStats("resolver_query.srv", &rq_srv, 120)
+	b = ReportStats("resolver_query.srv", &rq_srv, 240)
 	o.writer.Write(b.Bytes())
 	// b = ReportStats("resolver_query.name", &rq_name, 120)
 	// o.writer.Write(b.Bytes())
