@@ -124,6 +124,7 @@ func (o *StatOutput) RunOutputLoop() {
 
 	cq_sz := make(map[string] int)
 	cq_src := make(map[string] int)
+	cq_port := make(map[string] int)
 	cq_name := make(map[string] int)
 	cq_name_p := make(map[string] int)
 	cq_any_src := make(map[string] int)
@@ -199,6 +200,7 @@ func (o *StatOutput) RunOutputLoop() {
 			qp := strconv.Itoa(int(*m.QueryPort))
 			qid := strconv.Itoa(int(msg.MsgHdr.Id))
 			cq_key := fmt.Sprintf("%s:%s:%s", qa, qp, qid)
+			cq_port[qp]++
 
 			q := msg.Question[0]
 			name := q.Name
@@ -229,8 +231,8 @@ func (o *StatOutput) RunOutputLoop() {
 
 			msg := new(dns.Msg)
 			err := msg.Unpack(m.ResponseMessage)
-			//log.Printf("CR unpack failed: %s", err.Error())
 			if err != nil {
+				// log.Printf("CR unpack failed: %s", err.Error())
 				match, _ := regexp.MatchString(".*truncated message.*",
 					err.Error())
 				if match {
@@ -401,6 +403,8 @@ func (o *StatOutput) RunOutputLoop() {
 	var b *bytes.Buffer
 
 	b = ReportStats("client_query.size", &cq_sz, 0)
+	o.writer.Write(b.Bytes())
+	b = ReportStats("client_query.port", &cq_port, 30)
 	o.writer.Write(b.Bytes())
 	b = ReportStats("client_query.src", &cq_src, 120)
 	o.writer.Write(b.Bytes())
