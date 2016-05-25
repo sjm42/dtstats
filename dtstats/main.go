@@ -27,61 +27,61 @@ import "github.com/sjm42/dtstats"
 
 var
 (
-	fR = flag.String("r", "", "read dnstap data from file")
-	fW = flag.String("w", "-", "write statistics to file")
+    fR = flag.String("r", "", "read dnstap data from file")
+    fW = flag.String("w", "-", "write statistics to file")
 )
 
 func usage() {
-	fmt.Fprintf(os.Stderr, "Usage: %s [options]\n", os.Args[0])
-	flag.PrintDefaults()
+    fmt.Fprintf(os.Stderr, "Usage: %s [options]\n", os.Args[0])
+    flag.PrintDefaults()
 }
 
 func main() {
-	var err error
-	var i dtstats.Input
-	var o dtstats.Output
+    var err error
+    var i dtstats.Input
+    var o dtstats.Output
 
-	runtime.GOMAXPROCS(runtime.NumCPU())
-	log.SetFlags(0)
-	flag.Usage = usage
-	flag.Parse()
+    runtime.GOMAXPROCS(runtime.NumCPU())
+    log.SetFlags(0)
+    flag.Usage = usage
+    flag.Parse()
 
-	if *fR == "" {
-		usage()
-		os.Exit(1)
-	}
+    if *fR == "" {
+        usage()
+        os.Exit(1)
+    }
 
-	me := os.Args[0]
-	o, err = dtstats.NewStatOutputFromFilename(*fW)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "%s: Cannot write output file: %s\n", me, err)
-		os.Exit(1)
-	}
-	go o.RunOutputLoop()
+    me := os.Args[0]
+    o, err = dtstats.NewStatOutputFromFilename(*fW)
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "%s: Cannot write output file: %s\n", me, err)
+        os.Exit(1)
+    }
+    go o.RunOutputLoop()
 
-	// Handle Ctrl-c (SIGINT)
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, os.Interrupt)
+    // Handle Ctrl-c (SIGINT)
+    c := make(chan os.Signal, 1)
+    signal.Notify(c, os.Interrupt)
 
-	go func() {
-		for _ = range c {
-			o.Close()
-			os.Exit(0)
-		}
-	}()
+    go func() {
+        for _ = range c {
+            o.Close()
+            os.Exit(0)
+        }
+    }()
 
-	if *fR != "" {
-		i, err = dtstats.NewFrameStreamInputFromFilename(*fR)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "%s: Cannot read input file: %s\n", me, err)
-			os.Exit(1)
-		}
-		// fmt.Fprintf(os.Stderr, "%s: reading input %s\n", me, *fR)
-	}
+    if *fR != "" {
+        i, err = dtstats.NewFrameStreamInputFromFilename(*fR)
+        if err != nil {
+            fmt.Fprintf(os.Stderr, "%s: Cannot read input file: %s\n", me, err)
+            os.Exit(1)
+        }
+        // fmt.Fprintf(os.Stderr, "%s: reading input %s\n", me, *fR)
+    }
 
-	go i.ReadInto(o.GetOutputChannel())
-	i.Wait()
-	o.Close()
+    go i.ReadInto(o.GetOutputChannel())
+    i.Wait()
+    o.Close()
 }
 
 // EOF
