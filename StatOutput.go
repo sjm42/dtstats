@@ -404,7 +404,7 @@ func (o *StatOutput) RunOutputLoop() {
 
 	b = ReportStats("client_query.size", &cq_sz, 0)
 	o.writer.Write(b.Bytes())
-	b = ReportStats("client_query.port", &cq_port, 30)
+	b = ReportStats("client_query.port", &cq_port, cq/500)
 	o.writer.Write(b.Bytes())
 	b = ReportStats("client_query.src", &cq_src, 120)
 	o.writer.Write(b.Bytes())
