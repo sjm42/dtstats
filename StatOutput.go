@@ -211,7 +211,9 @@ func (o *StatOutput) RunOutputLoop() {
             cq_port[qp]++
 
             q := msg.Question[0]
-            cq_type[dns.TypeToString[q.Qtype]]++
+            qtype_s := dns.TypeToString[q.Qtype]
+            if len(qtype_s) == 0 { qtype_s = "Unknown" }
+            cq_type[qtype_s]++
 
             name := q.Name
             nlist := strings.Split(name, ".")
@@ -329,7 +331,9 @@ func (o *StatOutput) RunOutputLoop() {
 
             ra := net.IP(m.ResponseAddress).String()
             q := msg.Question[0]
-            rq_type[dns.TypeToString[q.Qtype]]++
+            qtype_s := dns.TypeToString[q.Qtype]
+            if len(qtype_s) == 0 { qtype_s = "Unknown" }
+            rq_type[qtype_s]++
 
             name := q.Name
             nlist := strings.Split(name, ".")
@@ -447,19 +451,19 @@ func (o *StatOutput) RunOutputLoop() {
     o.writer.Write(b.Bytes())
     b = ReportStats("client_response.rcode", &cr_rcode, 0, 0)
     o.writer.Write(b.Bytes())
-    b = ReportStats("client_response.tc.src", &cr_tc_src, 60, 40)
+    b = ReportStats("client_response.tc.src", &cr_tc_src, 120, 40)
     o.writer.Write(b.Bytes())
-    b = ReportStats("client_response.servfail.src", &cr_servfail_src, 60, 40)
+    b = ReportStats("client_response.servfail.src", &cr_servfail_src, 120, 40)
     o.writer.Write(b.Bytes())
-    b = ReportStats("client_response.servfail.name", &cr_servfail_name, 60, 40)
+    b = ReportStats("client_response.servfail.name", &cr_servfail_name, 120, 40)
     o.writer.Write(b.Bytes())
-    b = ReportStats("client_response.servfail.name_parent", &cr_servfail_name_p, 60, 40)
+    b = ReportStats("client_response.servfail.name_parent", &cr_servfail_name_p, 120, 40)
     o.writer.Write(b.Bytes())
-    b = ReportStats("client_response.nxdomain.src", &cr_nxdomain_src, 60, 40)
+    b = ReportStats("client_response.nxdomain.src", &cr_nxdomain_src, 120, 40)
     o.writer.Write(b.Bytes())
-    b = ReportStats("client_response.nxdomain.name", &cr_nxdomain_name, 60, 40)
+    b = ReportStats("client_response.nxdomain.name", &cr_nxdomain_name, 120, 40)
     o.writer.Write(b.Bytes())
-    b = ReportStats("client_response.nxdomain.name_p", &cr_nxdomain_name_p, 60, 40)
+    b = ReportStats("client_response.nxdomain.name_p", &cr_nxdomain_name_p, 120, 40)
     o.writer.Write(b.Bytes())
     b = ReportStats("client_response.slow.src", &cr_slow_src, 30, 40)
     o.writer.Write(b.Bytes())
@@ -481,13 +485,13 @@ func (o *StatOutput) RunOutputLoop() {
 
     b = ReportStats("resolver_response.rcode", &rr_rcode, 0, 0)
     o.writer.Write(b.Bytes())
-    b = ReportStats("resolver_response.slow.server", &rr_slow_srv, 3, 40)
+    b = ReportStats("resolver_response.slow.server", &rr_slow_srv, 10, 40)
     o.writer.Write(b.Bytes())
-    b = ReportStats("resolver_response.slow.name", &rr_slow_name, 3, 40)
+    b = ReportStats("resolver_response.slow.name", &rr_slow_name, 10, 40)
     o.writer.Write(b.Bytes())
-    b = ReportStats("resolver_response.slow.name_parent", &rr_slow_name_p, 3, 40)
+    b = ReportStats("resolver_response.slow.name_parent", &rr_slow_name_p, 10, 40)
     o.writer.Write(b.Bytes())
-    b = ReportStats("resolver_response.slow.zone", &rr_slow_zone, 3, 40)
+    b = ReportStats("resolver_response.slow.zone", &rr_slow_zone, 10, 40)
     o.writer.Write(b.Bytes())
 
     o.writer.Flush()
