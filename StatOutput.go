@@ -83,7 +83,7 @@ func ReportStats(data_name string, m *map[string] int, minval int, nmax int) *by
             break
         }
         c++
-		if nmax > 0 && c >= nmax { break }
+        if nmax > 0 && c >= nmax { break }
         b.WriteString(fmt.Sprintf("%s%s,host=%s,key=%s value=%d %d\n",
             PREFIX, data_name, host, k, v, TS))
     }
@@ -120,14 +120,18 @@ func (o *StatOutput) GetOutputChannel() (chan []byte) {
 }
 
 func (o *StatOutput) RunOutputLoop() {
-    var cq, cr, rq, rr int
-    var cr_d_ok, cr_d_no, cr_tc int
+    var cq, cq_f, cr, cr_f, rq, rq_f, rr, rr_f int
+    var cr_dt_ok, cr_dt_no, cr_tc int
+
+    cq, cq_f, cr, cr_f, rq, rq_f, rr, rr_f = 0, 0, 0, 0, 0, 0, 0, 0
+    cr_dt_ok, cr_dt_no, cr_tc = 0, 0, 0
 
     cq_sz := make(map[string] int)
     cq_src := make(map[string] int)
     cq_port := make(map[string] int)
     cq_name := make(map[string] int)
     cq_name_p := make(map[string] int)
+    cq_type := make(map[string] int)
     cq_any_src := make(map[string] int)
     cq_any_name := make(map[string] int)
     cq_any_name_p := make(map[string] int)
@@ -146,10 +150,12 @@ func (o *StatOutput) RunOutputLoop() {
     cr_slow_name_p := make(map[string] int)
 
     rq_zone := make(map[string] int)
+    rq_type := make(map[string] int)
     rq_srv := make(map[string] int)
     rq_name := make(map[string] int)
     rq_name_p := make(map[string] int)
 
+    rr_rcode := make(map[string] int)
     rr_slow_srv := make(map[string] int)
     rr_slow_name := make(map[string] int)
     rr_slow_name_p := make(map[string] int)
@@ -183,6 +189,7 @@ func (o *StatOutput) RunOutputLoop() {
             msg := new(dns.Msg)
             err := msg.Unpack(m.QueryMessage)
             if err != nil {
+                cq_f++
                 // log.Printf("CQ unpack failed: %s", err.Error())
                 continue
             }
@@ -204,6 +211,8 @@ func (o *StatOutput) RunOutputLoop() {
             cq_port[qp]++
 
             q := msg.Question[0]
+            cq_type[dns.TypeToString[q.Qtype]]++
+
             name := q.Name
             nlist := strings.Split(name, ".")
             name_p := "."
@@ -233,6 +242,7 @@ func (o *StatOutput) RunOutputLoop() {
             msg := new(dns.Msg)
             err := msg.Unpack(m.ResponseMessage)
             if err != nil {
+                cr_f++
                 // log.Printf("CR unpack failed: %s", err.Error())
                 match, _ := regexp.MatchString(".*truncated message.*",
                     err.Error())
@@ -281,7 +291,7 @@ func (o *StatOutput) RunOutputLoop() {
             tr := time.Unix(int64(*m.ResponseTimeSec), int64(*m.ResponseTimeNsec)).UTC()
             tq, ok := cq_src_track[cq_key]
             if ok {
-                cr_d_ok++
+                cr_dt_ok++
                 t_diff := tr.Sub(tq)
 
                 /* nanoseconds, 1000000 = 1ms */
@@ -293,7 +303,7 @@ func (o *StatOutput) RunOutputLoop() {
                     cr_slow_name_p[name_p]++
                 }
             } else {
-                cr_d_no++
+                cr_dt_no++
             }
 
 
@@ -310,7 +320,8 @@ func (o *StatOutput) RunOutputLoop() {
             msg := new(dns.Msg)
             err = msg.Unpack(m.QueryMessage)
             if err != nil {
-                log.Printf("RQ unpack failed: %s", err.Error())
+                rq_f++
+                // log.Printf("RQ unpack failed: %s", err.Error())
                 continue
             }
 
@@ -318,6 +329,8 @@ func (o *StatOutput) RunOutputLoop() {
 
             ra := net.IP(m.ResponseAddress).String()
             q := msg.Question[0]
+            rq_type[dns.TypeToString[q.Qtype]]++
+
             name := q.Name
             nlist := strings.Split(name, ".")
             name_p := "."
@@ -340,18 +353,22 @@ func (o *StatOutput) RunOutputLoop() {
             t_diff := tr.Sub(tq)
             // log.Printf("RR zone %s delay %d", zone, t_diff)
 
+            msg := new(dns.Msg)
+            err := msg.Unpack(m.ResponseMessage)
+            if err != nil {
+                rr_f++
+                // Probably truncated msg
+                // log.Printf("RR unpack failed: %s", err.Error())
+                continue
+            }
+
+            rcode := msg.MsgHdr.Rcode
+            rr_rcode[dns.RcodeToString[rcode]]++
+
             /* nanoseconds, 1000000 = 1ms */
             if t_diff > 500*1000000 {
                 // Delay more than 500ms
                 // log.Printf("Slow RR: %d ms %s", t_diff / 1000000, name)
-
-                msg := new(dns.Msg)
-                err := msg.Unpack(m.ResponseMessage)
-                if err != nil {
-                    // Probably truncated msg
-                    // log.Printf("RR unpack failed: %s", err.Error())
-                    continue
-                }
 
                 zone, _, err := dns.UnpackDomainName(m.QueryZone, 0)
                 if err != nil {
@@ -393,15 +410,23 @@ func (o *StatOutput) RunOutputLoop() {
     s.WriteString(fmt.Sprintf("dnstap.client_response,host=%s,key=count value=%d %d\n", host, cr, TS))
     s.WriteString(fmt.Sprintf("dnstap.resolver_query,host=%s,key=count value=%d %d\n", host, rq, TS))
     s.WriteString(fmt.Sprintf("dnstap.resolver_response,host=%s,key=count value=%d %d\n", host, rr, TS))
+
+    s.WriteString(fmt.Sprintf("dnstap.client_query.fail,host=%s,key=count value=%d %d\n", host, cq_f, TS))
+    s.WriteString(fmt.Sprintf("dnstap.client_response.fail,host=%s,key=count value=%d %d\n", host, cr_f, TS))
+    s.WriteString(fmt.Sprintf("dnstap.resolver_query.fail,host=%s,key=count value=%d %d\n", host, rq_f, TS))
+    s.WriteString(fmt.Sprintf("dnstap.resolver_response.fail,host=%s,key=count value=%d %d\n", host, rr_f, TS))
+
     s.WriteString(fmt.Sprintf("dnstap.client_response.tc,host=%s,key=count value=%d %d\n", host, cr_tc, TS))
-    s.WriteString(fmt.Sprintf("dnstap.client_response.track_delay,host=%s,key=success value=%d %d\n", host, cr_d_ok, TS))
-    s.WriteString(fmt.Sprintf("dnstap.client_response.track_delay,host=%s,key=failure value=%d %d\n", host, cr_d_no, TS))
+    s.WriteString(fmt.Sprintf("dnstap.client_response.track_delay,host=%s,key=success value=%d %d\n", host, cr_dt_ok, TS))
+    s.WriteString(fmt.Sprintf("dnstap.client_response.track_delay,host=%s,key=failure value=%d %d\n", host, cr_dt_no, TS))
     o.writer.Write(s.Bytes())
     o.writer.Flush()
 
     var b *bytes.Buffer
 
     b = ReportStats("client_query.size", &cq_sz, 0, 0)
+    o.writer.Write(b.Bytes())
+    b = ReportStats("client_query.type", &cq_type, 0, 0)
     o.writer.Write(b.Bytes())
     b = ReportStats("client_query.port", &cq_port, cq/500, 20)
     o.writer.Write(b.Bytes())
@@ -443,6 +468,8 @@ func (o *StatOutput) RunOutputLoop() {
     b = ReportStats("client_response.slow.name_parent", &cr_slow_name_p, 30, 40)
     o.writer.Write(b.Bytes())
 
+    b = ReportStats("resolver_query.type", &rq_type, 0, 0)
+    o.writer.Write(b.Bytes())
     b = ReportStats("resolver_query.zone", &rq_zone, 120, 40)
     o.writer.Write(b.Bytes())
     b = ReportStats("resolver_query.srv", &rq_srv, 120, 40)
@@ -452,6 +479,8 @@ func (o *StatOutput) RunOutputLoop() {
     b = ReportStats("resolver_query.name_parent", &rq_name_p, 120, 40)
     o.writer.Write(b.Bytes())
 
+    b = ReportStats("resolver_response.rcode", &rr_rcode, 0, 0)
+    o.writer.Write(b.Bytes())
     b = ReportStats("resolver_response.slow.server", &rr_slow_srv, 3, 40)
     o.writer.Write(b.Bytes())
     b = ReportStats("resolver_response.slow.name", &rr_slow_name, 3, 40)
