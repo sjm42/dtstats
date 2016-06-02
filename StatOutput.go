@@ -121,10 +121,10 @@ func (o *StatOutput) GetOutputChannel() (chan []byte) {
 
 func (o *StatOutput) RunOutputLoop() {
     var cq, cq_f, cr, cr_f, rq, rq_f, rr, rr_f int
-    var cr_dt_ok, cr_dt_no, cr_tc int
+    var cr_dt_ok, cr_dt_no, cr_tc, rr_tc int
 
     cq, cq_f, cr, cr_f, rq, rq_f, rr, rr_f = 0, 0, 0, 0, 0, 0, 0, 0
-    cr_dt_ok, cr_dt_no, cr_tc = 0, 0, 0
+    cr_dt_ok, cr_dt_no, cr_tc, rr_tc = 0, 0, 0, 0
 
     cq_sz := make(map[string] int)
     cq_src := make(map[string] int)
@@ -246,8 +246,7 @@ func (o *StatOutput) RunOutputLoop() {
             if err != nil {
                 cr_f++
                 // log.Printf("CR unpack failed: %s", err.Error())
-                match, _ := regexp.MatchString(".*truncated message.*",
-                    err.Error())
+                match, _ := regexp.MatchString(".*truncated message.*", err.Error())
                 if match {
                     cr_tc++
                     if m.QueryAddress != nil {
@@ -363,6 +362,8 @@ func (o *StatOutput) RunOutputLoop() {
                 rr_f++
                 // Probably truncated msg
                 // log.Printf("RR unpack failed: %s", err.Error())
+                match, _ := regexp.MatchString(".*truncated message.*", err.Error())
+                if match { rr_tc++ }
                 continue
             }
 
@@ -421,6 +422,7 @@ func (o *StatOutput) RunOutputLoop() {
     s.WriteString(fmt.Sprintf("dnstap.resolver_response.fail,host=%s,key=count value=%d %d\n", host, rr_f, TS))
 
     s.WriteString(fmt.Sprintf("dnstap.client_response.tc,host=%s,key=count value=%d %d\n", host, cr_tc, TS))
+    s.WriteString(fmt.Sprintf("dnstap.resolver_response.tc,host=%s,key=count value=%d %d\n", host, rr_tc, TS))
     s.WriteString(fmt.Sprintf("dnstap.client_response.track_delay,host=%s,key=success value=%d %d\n", host, cr_dt_ok, TS))
     s.WriteString(fmt.Sprintf("dnstap.client_response.track_delay,host=%s,key=failure value=%d %d\n", host, cr_dt_no, TS))
     o.writer.Write(s.Bytes())
