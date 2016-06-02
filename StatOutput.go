@@ -487,13 +487,13 @@ func (o *StatOutput) RunOutputLoop() {
 
     b = ReportStats("resolver_response.rcode", &rr_rcode, 0, 0)
     o.writer.Write(b.Bytes())
-    b = ReportStats("resolver_response.slow.server", &rr_slow_srv, 10, 40)
+    b = ReportStats("resolver_response.slow.server", &rr_slow_srv, 30, 40)
     o.writer.Write(b.Bytes())
-    b = ReportStats("resolver_response.slow.name", &rr_slow_name, 10, 40)
+    b = ReportStats("resolver_response.slow.name", &rr_slow_name, 30, 40)
     o.writer.Write(b.Bytes())
-    b = ReportStats("resolver_response.slow.name_parent", &rr_slow_name_p, 10, 40)
+    b = ReportStats("resolver_response.slow.name_parent", &rr_slow_name_p, 30, 40)
     o.writer.Write(b.Bytes())
-    b = ReportStats("resolver_response.slow.zone", &rr_slow_zone, 10, 40)
+    b = ReportStats("resolver_response.slow.zone", &rr_slow_zone, 30, 40)
     o.writer.Write(b.Bytes())
 
     o.writer.Flush()
