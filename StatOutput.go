@@ -156,6 +156,10 @@ func (o *StatOutput) RunOutputLoop() {
     rq_name_p := make(map[string] int)
 
     rr_rcode := make(map[string] int)
+    rr_servfail_name := make(map[string] int)
+    rr_servfail_name_p := make(map[string] int)
+    rr_nxdomain_name := make(map[string] int)
+    rr_nxdomain_name_p := make(map[string] int)
     rr_slow_srv := make(map[string] int)
     rr_slow_name := make(map[string] int)
     rr_slow_name_p := make(map[string] int)
@@ -367,8 +371,32 @@ func (o *StatOutput) RunOutputLoop() {
                 continue
             }
 
+            if (len(msg.Question) == 0) {
+                // log.Printf("RR question empty!")
+                continue
+            }
+
+            q := msg.Question[0]
+            name := q.Name
+            nlist := strings.Split(name, ".")
+            name_p := "."
+            if len(nlist) > 1 {
+                nlist = nlist[1:]
+                if len(nlist) == 1 { nlist = append(nlist, "") }
+                name_p = strings.Join(nlist, ".")
+            }
+
             rcode := msg.MsgHdr.Rcode
             rr_rcode[dns.RcodeToString[rcode]]++
+
+            if rcode == dns.RcodeServerFailure {
+                rr_servfail_name[name]++
+                rr_servfail_name_p[name_p]++
+            }
+            if rcode == dns.RcodeNameError {
+                rr_nxdomain_name[name]++
+                rr_nxdomain_name_p[name_p]++
+            }
 
             /* nanoseconds, 1000000 = 1ms */
             if t_diff > 500*1000000 {
@@ -486,6 +514,14 @@ func (o *StatOutput) RunOutputLoop() {
     o.writer.Write(b.Bytes())
 
     b = ReportStats("resolver_response.rcode", &rr_rcode, 0, 0)
+    o.writer.Write(b.Bytes())
+    b = ReportStats("resolver_response.servfail.name", &rr_servfail_name, 120, 40)
+    o.writer.Write(b.Bytes())
+    b = ReportStats("resolver_response.servfail.name_parent", &rr_servfail_name_p, 120, 40)
+    o.writer.Write(b.Bytes())
+    b = ReportStats("resolver_response.nxdomain.name", &rr_nxdomain_name, 120, 40)
+    o.writer.Write(b.Bytes())
+    b = ReportStats("resolver_response.nxdomain.name_p", &rr_nxdomain_name_p, 120, 40)
     o.writer.Write(b.Bytes())
     b = ReportStats("resolver_response.slow.server", &rr_slow_srv, 30, 40)
     o.writer.Write(b.Bytes())
