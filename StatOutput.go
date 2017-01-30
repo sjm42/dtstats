@@ -89,7 +89,7 @@ func ReportStats(data_name string, m *map[string] int, minval int, nmax int) *by
 		kq = kq[1:len(kq)-1]
 		// Escape these chars: space, comma, equals sign
 		// for InfluxDB tag value compatibility
-		re := regexp.MustCompile("[ ,=]")
+		re := regexp.MustCompile("([ ,=])")
 		kq = re.ReplaceAllString(kq, "\\$1")
 
         b.WriteString(fmt.Sprintf("%s%s,host=%s,key=%s value=%d %d\n",
