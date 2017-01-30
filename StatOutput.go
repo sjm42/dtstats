@@ -85,6 +85,10 @@ func ReportStats(data_name string, m *map[string] int, minval int, nmax int) *by
         c++
         if nmax > 0 && c >= nmax { break }
 		kq := fmt.Sprintf("%+q", k)
+		// Sigh, omit double quotes from the string, added by "%+q"
+		kq = kq[1:len(kq)-1]
+		// Escape these chars: space, comma, equals sign
+		// for InfluxDB tag value compatibility
 		re := regexp.MustCompile("[ ,=]")
 		kq = re.ReplaceAllString(kq, "\\$1")
 
