@@ -84,8 +84,12 @@ func ReportStats(data_name string, m *map[string] int, minval int, nmax int) *by
         }
         c++
         if nmax > 0 && c >= nmax { break }
+		kq := fmt.Sprintf("%+q", k)
+		re := regexp.MustCompile("[ ,=]")
+		kq = re.ReplaceAllString(kq, "\\$1")
+
         b.WriteString(fmt.Sprintf("%s%s,host=%s,key=%s value=%d %d\n",
-            PREFIX, data_name, host, k, v, TS))
+            PREFIX, data_name, host, kq, v, TS))
     }
     b.WriteString(fmt.Sprintf("%s%s.stats,host=%s,key=count_unique value=%d %d\n",
         PREFIX, data_name, host, len(*m), TS))
