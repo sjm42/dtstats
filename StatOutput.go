@@ -46,7 +46,15 @@ type Pair struct {
 }
 type PairList []Pair
 
+type Inspect struct {
+	name string
+	match string
+	mtype int
+}
+
 const PREFIX = "dnstap."
+const INSPECT = "/opt/dns/etc/INSPECT.dnstap"
+const REPORT_DIR = "/opt/dns/stats/spool"
 
 var TS int64 = 0
 var TS_first int64 = 0
@@ -75,6 +83,7 @@ func ReportStats(data_name string, m *map[string] int, minval int, nmax int) *by
     //b.WriteString(fmt.Sprintf("pl %T\n", pl))
 
     var c = 0
+	var re = regexp.MustCompile("([ ,=])")
     for _, p := range pl {
         //b.WriteString(fmt.Sprintf("i %T\n", i))
         //b.WriteString(fmt.Sprintf("p %T\n", p))
@@ -90,7 +99,6 @@ func ReportStats(data_name string, m *map[string] int, minval int, nmax int) *by
 		kq = kq[1:len(kq)-1]
 		// Escape these chars: space, comma, equals sign
 		// for InfluxDB tag value compatibility
-		var re = regexp.MustCompile("([ ,=])")
 		kq = re.ReplaceAllString(kq, "\\$1")
 
         b.WriteString(fmt.Sprintf("%s%s,host=%s,key=%s value=%d %d\n",
@@ -129,6 +137,45 @@ func (o *StatOutput) GetOutputChannel() (chan []byte) {
 }
 
 func (o *StatOutput) RunOutputLoop() {
+	var cq_INSPECT = make([]Inspect, 0)
+	var cq_CNT = make(map[string] int)
+
+	f_ins, _ := os.Open(INSPECT)
+	defer f_ins.Close()
+	scn := bufio.NewScanner(f_ins)
+	scn.Split(bufio.ScanLines)
+	for scn.Scan() {
+		line := scn.Text()
+
+		// Trim whitespace, skip empty lines and comments
+		line = strings.TrimSpace(line)
+		if len(line) < 1 || strings.HasPrefix(line, "#") {
+			continue
+		}
+
+		// Combine sequential TAB chars into one
+		l1 := len(line)
+		l2 := l1
+		for true {
+			line = strings.Replace(line, "\t\t", "\t", -1)
+			l2 = len(line)
+			if l2 == l1 { break }
+			l1 = l2
+		}
+		// name, pre/post, stringmatch
+		cline := strings.Split(line, "\t")
+		if len(cline) < 3 {
+			// silently discard
+			continue
+		}
+		if cline[1] == "pre" {
+			cq_INSPECT = append(cq_INSPECT, Inspect{cline[0], cline[2], 1})
+		} else if cline[1] == "post" {
+			cq_INSPECT = append(cq_INSPECT, Inspect{cline[0], cline[2], 2})
+		}
+		// Other match types than pre/post are silently discarded
+	}
+
     var cq, cq_f, cr, cr_f, rq, rq_f, rr, rr_f int
     var cr_dt_ok, cr_dt_no, cr_tc, rr_tc int
 
@@ -252,8 +299,21 @@ func (o *StatOutput) RunOutputLoop() {
                 cq_any_name_p[name_p]++
             }
 
+			// Check if query matches any element in cq_INSPECT
+			for _, insp := range cq_INSPECT {
+				insp_m := false
+				if insp.mtype == 1 {
+					if strings.HasPrefix(name, insp.match) { insp_m = true }
+				} else if insp.mtype == 2 {
+					if strings.HasSuffix(name, insp.match) { insp_m = true }
+				}
+				if insp_m {
+					cq_CNT[ insp.name + "\t" + qa + "\t" + name ]++
+				}
+			}
 
-        case Message_CLIENT_RESPONSE:
+
+		case Message_CLIENT_RESPONSE:
             cr++
 
             var sz = fmt.Sprintf("%04d", (binary.Size(m.ResponseMessage)/50)*50 + 50)
@@ -445,8 +505,8 @@ func (o *StatOutput) RunOutputLoop() {
                 rr_slow_name_p[name_p]++
                 rr_slow_zone[zone]++
             }
-        }
-    }
+        } // END switch *m.Type
+    } // END for frame := range o.outputChannel
 
     o.writer.Flush()
     host, _ := os.Hostname()
@@ -546,8 +606,18 @@ func (o *StatOutput) RunOutputLoop() {
     b = ReportStats("resolver_response.slow.zone", &rr_slow_zone, 30, 40)
     o.writer.Write(b.Bytes())
 
-    o.writer.Flush()
-    close(o.wait)
+	rep_file := fmt.Sprintf("%s/INSPECT-%s.%d.report", REPORT_DIR, host, TS)
+	rep_tmp := rep_file+".tmp"
+	rep_f, _ := os.Create(rep_tmp)
+	for k, v := range cq_CNT {
+		rep_f.WriteString(strconv.Itoa(v)+"\t"+k+"\n")
+	}
+	rep_f.Sync()
+	rep_f.Close()
+	os.Rename(rep_tmp, rep_file)
+
+	o.writer.Flush()
+	close(o.wait)
 }
 
 func (o *StatOutput) Close() {
