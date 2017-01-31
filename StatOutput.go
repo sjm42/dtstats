@@ -49,6 +49,7 @@ type PairList []Pair
 const PREFIX = "dnstap."
 
 var TS int64 = 0
+var TS_first int64 = 0
 
 func (p PairList) Len() int { return len(p) }
 func (p PairList) Less(i, j int) bool { return p[i].val < p[j].val }
@@ -69,27 +70,27 @@ func ReportStats(data_name string, m *map[string] int, minval int, nmax int) *by
     var b bytes.Buffer
     host, _ := os.Hostname()
 
-    pl := SortByValue(m)
+    var pl = SortByValue(m)
     //b.WriteString(fmt.Sprintf("dom %T\n", dom))
     //b.WriteString(fmt.Sprintf("pl %T\n", pl))
 
-    c := 0
+    var c = 0
     for _, p := range pl {
         //b.WriteString(fmt.Sprintf("i %T\n", i))
         //b.WriteString(fmt.Sprintf("p %T\n", p))
-        k := p.key
-        v := p.val
+        var k = p.key
+        var v = p.val
         if v < minval {
             break
         }
         c++
         if nmax > 0 && c >= nmax { break }
-		kq := fmt.Sprintf("%+q", k)
+		var kq = fmt.Sprintf("%+q", k)
 		// Sigh, omit double quotes from the string, added by "%+q"
 		kq = kq[1:len(kq)-1]
 		// Escape these chars: space, comma, equals sign
 		// for InfluxDB tag value compatibility
-		re := regexp.MustCompile("([ ,=])")
+		var re = regexp.MustCompile("([ ,=])")
 		kq = re.ReplaceAllString(kq, "\\$1")
 
         b.WriteString(fmt.Sprintf("%s%s,host=%s,key=%s value=%d %d\n",
@@ -134,48 +135,48 @@ func (o *StatOutput) RunOutputLoop() {
     cq, cq_f, cr, cr_f, rq, rq_f, rr, rr_f = 0, 0, 0, 0, 0, 0, 0, 0
     cr_dt_ok, cr_dt_no, cr_tc, rr_tc = 0, 0, 0, 0
 
-    cq_sz := make(map[string] int)
-    cq_src := make(map[string] int)
-    cq_port := make(map[string] int)
-    cq_name := make(map[string] int)
-    cq_name_p := make(map[string] int)
-    cq_type := make(map[string] int)
-    cq_any_src := make(map[string] int)
-    cq_any_name := make(map[string] int)
-    cq_any_name_p := make(map[string] int)
+    var cq_sz = make(map[string] int)
+    var cq_src = make(map[string] int)
+    var cq_port = make(map[string] int)
+    var cq_name = make(map[string] int)
+    var cq_name_p = make(map[string] int)
+    var cq_type = make(map[string] int)
+    var cq_any_src = make(map[string] int)
+    var cq_any_name = make(map[string] int)
+    var cq_any_name_p = make(map[string] int)
 
-    cr_sz := make(map[string] int)
-    cr_rcode := make(map[string] int)
-    cr_servfail_src := make(map[string] int)
-    cr_servfail_name := make(map[string] int)
-    cr_servfail_name_p := make(map[string] int)
-    cr_nxdomain_src := make(map[string] int)
-    cr_nxdomain_name := make(map[string] int)
-    cr_nxdomain_name_p := make(map[string] int)
-    cr_tc_src := make(map[string] int)
-    cr_slow_src := make(map[string] int)
-    cr_slow_name := make(map[string] int)
-    cr_slow_name_p := make(map[string] int)
+    var cr_sz = make(map[string] int)
+    var cr_rcode = make(map[string] int)
+    var cr_servfail_src = make(map[string] int)
+    var cr_servfail_name = make(map[string] int)
+    var cr_servfail_name_p = make(map[string] int)
+    var cr_nxdomain_src = make(map[string] int)
+    var cr_nxdomain_name = make(map[string] int)
+    var cr_nxdomain_name_p = make(map[string] int)
+    var cr_tc_src = make(map[string] int)
+    var cr_slow_src = make(map[string] int)
+    var cr_slow_name = make(map[string] int)
+    var cr_slow_name_p = make(map[string] int)
 
-    rq_zone := make(map[string] int)
-    rq_type := make(map[string] int)
-    rq_srv := make(map[string] int)
-    rq_name := make(map[string] int)
-    rq_name_p := make(map[string] int)
+    var rq_zone = make(map[string] int)
+    var rq_type = make(map[string] int)
+    var rq_srv = make(map[string] int)
+    var rq_name = make(map[string] int)
+    var rq_name_p = make(map[string] int)
 
-    rr_rcode := make(map[string] int)
-    rr_servfail_name := make(map[string] int)
-    rr_servfail_name_p := make(map[string] int)
-    rr_nxdomain_name := make(map[string] int)
-    rr_nxdomain_name_p := make(map[string] int)
-    rr_slow_srv := make(map[string] int)
-    rr_slow_name := make(map[string] int)
-    rr_slow_name_p := make(map[string] int)
-    rr_slow_zone := make(map[string] int)
+    var rr_rcode = make(map[string] int)
+    var rr_servfail_name = make(map[string] int)
+    var rr_servfail_name_p = make(map[string] int)
+    var rr_nxdomain_name = make(map[string] int)
+    var rr_nxdomain_name_p = make(map[string] int)
+    var rr_slow_srv = make(map[string] int)
+    var rr_slow_name = make(map[string] int)
+    var rr_slow_name_p = make(map[string] int)
+    var rr_slow_zone = make(map[string] int)
 
-    cq_src_track := make(map[string] time.Time)
+    var cq_src_track = make(map[string] time.Time)
 
-    dt := &Dnstap{}
+    var dt = &Dnstap{}
     for frame := range o.outputChannel {
         if err := proto.Unmarshal(frame, dt); err != nil {
             log.Fatalf("analyzer.StatOutput: proto.Unmarshal() failed: %s\n", err)
@@ -192,14 +193,14 @@ func (o *StatOutput) RunOutputLoop() {
         case Message_CLIENT_QUERY:
             cq++
 
-            sz := fmt.Sprintf("%04d", (binary.Size(m.QueryMessage)/50)*50 + 50)
+            var sz = fmt.Sprintf("%04d", (binary.Size(m.QueryMessage)/50)*50 + 50)
             cq_sz[sz]++
 
-            qa := net.IP(m.QueryAddress).String()
+            var qa = net.IP(m.QueryAddress).String()
             cq_src[qa]++
 
-            msg := new(dns.Msg)
-            err := msg.Unpack(m.QueryMessage)
+            var msg = new(dns.Msg)
+            var err = msg.Unpack(m.QueryMessage)
             if err != nil {
                 cq_f++
                 // log.Printf("CQ unpack failed: %s", err.Error())
@@ -211,25 +212,30 @@ func (o *StatOutput) RunOutputLoop() {
                 continue
             }
 
-            tq := time.Unix(int64(*m.QueryTimeSec), int64(*m.QueryTimeNsec)).UTC()
-            if TS == 0 {
-                // Use 60sec resolution
-                TS = (tq.Unix() / 60) * 60
-            }
+            var tq = time.Unix(int64(*m.QueryTimeSec), int64(*m.QueryTimeNsec)).UTC()
 
-            qp := strconv.Itoa(int(*m.QueryPort))
-            qid := strconv.Itoa(int(msg.MsgHdr.Id))
-            cq_key := fmt.Sprintf("%s:%s:%s", qa, qp, qid)
+			var ts_now = tq.Unix()
+			var ts_60 int64 = (ts_now / 60) * 60
+            if TS == 0 {
+                TS = ts_60
+				TS_first = ts_now
+            } else if TS < ts_60 && ts_now < TS_first+10 {
+				TS = ts_60
+			}
+
+            var qp = strconv.Itoa(int(*m.QueryPort))
+            var qid = strconv.Itoa(int(msg.MsgHdr.Id))
+            var cq_key = fmt.Sprintf("%s:%s:%s", qa, qp, qid)
             cq_port[qp]++
 
-            q := msg.Question[0]
+            var q = msg.Question[0]
             qtype_s := dns.TypeToString[q.Qtype]
             if len(qtype_s) == 0 { qtype_s = "Unknown" }
             cq_type[qtype_s]++
 
-            name := q.Name
-            nlist := strings.Split(name, ".")
-            name_p := "."
+            var name = q.Name
+            var nlist = strings.Split(name, ".")
+            var name_p = "."
             if len(nlist) > 1 {
                 nlist = nlist[1:]
                 if len(nlist) == 1 { nlist = append(nlist, "") }
@@ -250,11 +256,11 @@ func (o *StatOutput) RunOutputLoop() {
         case Message_CLIENT_RESPONSE:
             cr++
 
-            sz := fmt.Sprintf("%04d", (binary.Size(m.ResponseMessage)/50)*50 + 50)
+            var sz = fmt.Sprintf("%04d", (binary.Size(m.ResponseMessage)/50)*50 + 50)
             cr_sz[sz]++
 
-            msg := new(dns.Msg)
-            err := msg.Unpack(m.ResponseMessage)
+            var msg = new(dns.Msg)
+            var err = msg.Unpack(m.ResponseMessage)
             if err != nil {
                 cr_f++
                 // log.Printf("CR unpack failed: %s", err.Error())
@@ -273,21 +279,21 @@ func (o *StatOutput) RunOutputLoop() {
                 continue
             }
 
-            qa := net.IP(m.QueryAddress).String()
-            qp := strconv.Itoa(int(*m.QueryPort))
-            qid := strconv.Itoa(int(msg.MsgHdr.Id))
-            cq_key := fmt.Sprintf("%s:%s:%s", qa, qp, qid)
-            q := msg.Question[0]
-            name := q.Name
-            nlist := strings.Split(name, ".")
-            name_p := "."
+            var qa = net.IP(m.QueryAddress).String()
+            var qp = strconv.Itoa(int(*m.QueryPort))
+            var qid = strconv.Itoa(int(msg.MsgHdr.Id))
+            var cq_key = fmt.Sprintf("%s:%s:%s", qa, qp, qid)
+            var q = msg.Question[0]
+            var name = q.Name
+            var nlist = strings.Split(name, ".")
+            var name_p = "."
             if len(nlist) > 1 {
                 nlist = nlist[1:]
                 if len(nlist) == 1 { nlist = append(nlist, "") }
                 name_p = strings.Join(nlist, ".")
             }
 
-            rcode := msg.MsgHdr.Rcode
+            var rcode = msg.MsgHdr.Rcode
             cr_rcode[dns.RcodeToString[rcode]]++
 
             if rcode == dns.RcodeServerFailure {
@@ -301,11 +307,11 @@ func (o *StatOutput) RunOutputLoop() {
                 cr_nxdomain_name_p[name_p]++
             }
 
-            tr := time.Unix(int64(*m.ResponseTimeSec), int64(*m.ResponseTimeNsec)).UTC()
+            var tr = time.Unix(int64(*m.ResponseTimeSec), int64(*m.ResponseTimeNsec)).UTC()
             tq, ok := cq_src_track[cq_key]
             if ok {
                 cr_dt_ok++
-                t_diff := tr.Sub(tq)
+                var t_diff = tr.Sub(tq)
 
                 /* nanoseconds, 1000000 = 1ms */
                 if t_diff > 1000 * 1000000 {
@@ -330,7 +336,7 @@ func (o *StatOutput) RunOutputLoop() {
             }
             rq_zone[zone]++
 
-            msg := new(dns.Msg)
+            var msg = new(dns.Msg)
             err = msg.Unpack(m.QueryMessage)
             if err != nil {
                 rq_f++
@@ -338,17 +344,17 @@ func (o *StatOutput) RunOutputLoop() {
                 continue
             }
 
-            // qid := strconv.Itoa(int(msg.MsgHdr.Id))
+            // var qid = strconv.Itoa(int(msg.MsgHdr.Id))
 
-            ra := net.IP(m.ResponseAddress).String()
-            q := msg.Question[0]
-            qtype_s := dns.TypeToString[q.Qtype]
+            var ra = net.IP(m.ResponseAddress).String()
+            var q = msg.Question[0]
+            var qtype_s = dns.TypeToString[q.Qtype]
             if len(qtype_s) == 0 { qtype_s = "Unknown" }
             rq_type[qtype_s]++
 
-            name := q.Name
-            nlist := strings.Split(name, ".")
-            name_p := "."
+            var name = q.Name
+            var nlist = strings.Split(name, ".")
+            var name_p = "."
             if len(nlist) > 1 {
                 nlist = nlist[1:]
                 if len(nlist) == 1 { nlist = append(nlist, "") }
@@ -363,13 +369,13 @@ func (o *StatOutput) RunOutputLoop() {
         case Message_RESOLVER_RESPONSE:
             rr++
 
-            tq := time.Unix(int64(*m.QueryTimeSec), int64(*m.QueryTimeNsec)).UTC()
-            tr := time.Unix(int64(*m.ResponseTimeSec), int64(*m.ResponseTimeNsec)).UTC()
-            t_diff := tr.Sub(tq)
+            var tq = time.Unix(int64(*m.QueryTimeSec), int64(*m.QueryTimeNsec)).UTC()
+            var tr = time.Unix(int64(*m.ResponseTimeSec), int64(*m.ResponseTimeNsec)).UTC()
+            var t_diff = tr.Sub(tq)
             // log.Printf("RR zone %s delay %d", zone, t_diff)
 
-            msg := new(dns.Msg)
-            err := msg.Unpack(m.ResponseMessage)
+            var msg = new(dns.Msg)
+            var err = msg.Unpack(m.ResponseMessage)
             if err != nil {
                 rr_f++
                 // Probably truncated msg
@@ -384,17 +390,17 @@ func (o *StatOutput) RunOutputLoop() {
                 continue
             }
 
-            q := msg.Question[0]
-            name := q.Name
-            nlist := strings.Split(name, ".")
-            name_p := "."
+            var q = msg.Question[0]
+            var name = q.Name
+            var nlist = strings.Split(name, ".")
+            var name_p = "."
             if len(nlist) > 1 {
                 nlist = nlist[1:]
                 if len(nlist) == 1 { nlist = append(nlist, "") }
                 name_p = strings.Join(nlist, ".")
             }
 
-            rcode := msg.MsgHdr.Rcode
+            var rcode = msg.MsgHdr.Rcode
             rr_rcode[dns.RcodeToString[rcode]]++
 
             if rcode == dns.RcodeServerFailure {
@@ -417,17 +423,17 @@ func (o *StatOutput) RunOutputLoop() {
                     continue
                 }
 
-                // qid := strconv.Itoa(int(msg.MsgHdr.Id))
+                // var qid = strconv.Itoa(int(msg.MsgHdr.Id))
                 if (len(msg.Question) == 0) {
                     // Question is empty, truncated and non-parsed msg
                     continue
                 }
 
-                ra := net.IP(m.ResponseAddress).String()
-                q := msg.Question[0]
-                name := q.Name
-                nlist := strings.Split(name, ".")
-                name_p := "."
+                var ra = net.IP(m.ResponseAddress).String()
+                var q = msg.Question[0]
+                var name = q.Name
+                var nlist = strings.Split(name, ".")
+                var name_p = "."
                 if len(nlist) > 1 {
                     nlist = nlist[1:]
                     if len(nlist) == 1 { nlist = append(nlist, "") }
