@@ -606,18 +606,18 @@ func (o *StatOutput) RunOutputLoop() {
     b = ReportStats("resolver_response.slow.zone", &rr_slow_zone, 30, 40)
     o.writer.Write(b.Bytes())
 
-	rep_file := fmt.Sprintf("%s/INSPECT-%s.%d.report", REPORT_DIR, host, TS)
-	rep_tmp := rep_file+".tmp"
-	rep_f, _ := os.Create(rep_tmp)
-	for k, v := range cq_CNT {
-		rep_f.WriteString(strconv.Itoa(v)+"\t"+k+"\n")
-	}
-	rep_f.Sync()
-	rep_f.Close()
-	os.Rename(rep_tmp, rep_file)
+    rep_file := fmt.Sprintf("%s/INSPECT-%s.%d.report", REPORT_DIR, host, TS)
+    rep_tmp := rep_file+".tmp"
+    rep_f, _ := os.Create(rep_tmp)
+    for k, v := range cq_CNT {
+        rep_f.WriteString(strconv.Itoa(v)+"\t"+k+"\n")
+    }
+    rep_f.Sync()
+    rep_f.Close()
+    os.Rename(rep_tmp, rep_file)
 
-	o.writer.Flush()
-	close(o.wait)
+    o.writer.Flush()
+    close(o.wait)
 }
 
 func (o *StatOutput) Close() {
