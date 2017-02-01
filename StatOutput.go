@@ -47,9 +47,9 @@ type Pair struct {
 type PairList []Pair
 
 type Inspect struct {
-	name string
-	match string
-	mtype int
+    name string
+    match string
+    mtype int
 }
 
 const PREFIX = "dnstap."
@@ -83,7 +83,7 @@ func ReportStats(data_name string, m *map[string] int, minval int, nmax int) *by
     //b.WriteString(fmt.Sprintf("pl %T\n", pl))
 
     var c = 0
-	var re = regexp.MustCompile("([ ,=])")
+    var re = regexp.MustCompile("([ ,=])")
     for _, p := range pl {
         //b.WriteString(fmt.Sprintf("i %T\n", i))
         //b.WriteString(fmt.Sprintf("p %T\n", p))
@@ -94,12 +94,12 @@ func ReportStats(data_name string, m *map[string] int, minval int, nmax int) *by
         }
         c++
         if nmax > 0 && c >= nmax { break }
-		var kq = fmt.Sprintf("%+q", k)
-		// Sigh, omit double quotes from the string, added by "%+q"
-		kq = kq[1:len(kq)-1]
-		// Escape these chars: space, comma, equals sign
-		// for InfluxDB tag value compatibility
-		kq = re.ReplaceAllString(kq, "\\$1")
+        var kq = fmt.Sprintf("%+q", k)
+        // Sigh, omit double quotes from the string, added by "%+q"
+        kq = kq[1:len(kq)-1]
+        // Escape these chars: space, comma, equals sign
+        // for InfluxDB tag value compatibility
+        kq = re.ReplaceAllString(kq, "\\$1")
 
         b.WriteString(fmt.Sprintf("%s%s,host=%s,key=%s value=%d %d\n",
             PREFIX, data_name, host, kq, v, TS))
@@ -137,44 +137,44 @@ func (o *StatOutput) GetOutputChannel() (chan []byte) {
 }
 
 func (o *StatOutput) RunOutputLoop() {
-	var cq_INSPECT = make([]Inspect, 0)
-	var cq_CNT = make(map[string] int)
+    var cq_INSPECT = make([]Inspect, 0)
+    var cq_CNT = make(map[string] int)
 
-	f_ins, _ := os.Open(INSPECT)
-	defer f_ins.Close()
-	scn := bufio.NewScanner(f_ins)
-	scn.Split(bufio.ScanLines)
-	for scn.Scan() {
-		line := scn.Text()
+    f_ins, _ := os.Open(INSPECT)
+    defer f_ins.Close()
+    scn := bufio.NewScanner(f_ins)
+    scn.Split(bufio.ScanLines)
+    for scn.Scan() {
+        line := scn.Text()
 
-		// Trim whitespace, skip empty lines and comments
-		line = strings.TrimSpace(line)
-		if len(line) < 1 || strings.HasPrefix(line, "#") {
-			continue
-		}
+        // Trim whitespace, skip empty lines and comments
+        line = strings.TrimSpace(line)
+        if len(line) < 1 || strings.HasPrefix(line, "#") {
+            continue
+        }
 
-		// Combine sequential TAB chars into one
-		l1 := len(line)
-		l2 := l1
-		for true {
-			line = strings.Replace(line, "\t\t", "\t", -1)
-			l2 = len(line)
-			if l2 == l1 { break }
-			l1 = l2
-		}
-		// name, pre/post, stringmatch
-		cline := strings.Split(line, "\t")
-		if len(cline) < 3 {
-			// silently discard
-			continue
-		}
-		if cline[1] == "pre" {
-			cq_INSPECT = append(cq_INSPECT, Inspect{cline[0], cline[2], 1})
-		} else if cline[1] == "post" {
-			cq_INSPECT = append(cq_INSPECT, Inspect{cline[0], cline[2], 2})
-		}
-		// Other match types than pre/post are silently discarded
-	}
+        // Combine sequential TAB chars into one
+        l1 := len(line)
+        l2 := l1
+        for true {
+            line = strings.Replace(line, "\t\t", "\t", -1)
+            l2 = len(line)
+            if l2 == l1 { break }
+            l1 = l2
+        }
+        // name, prefix/suffix, stringmatch
+        cline := strings.Split(line, "\t")
+        if len(cline) != 3 {
+            // silently discard illegal lines
+            continue
+        }
+        if cline[1] == "prefix" {
+            cq_INSPECT = append(cq_INSPECT, Inspect{cline[0], cline[2], 1})
+        } else if cline[1] == "suffix" {
+            cq_INSPECT = append(cq_INSPECT, Inspect{cline[0], cline[2], 2})
+        }
+        // Other match types than prefix/suffix are silently discarded
+    }
 
     var cq, cq_f, cr, cr_f, rq, rq_f, rr, rr_f int
     var cr_dt_ok, cr_dt_no, cr_tc, rr_tc int
@@ -261,14 +261,14 @@ func (o *StatOutput) RunOutputLoop() {
 
             var tq = time.Unix(int64(*m.QueryTimeSec), int64(*m.QueryTimeNsec)).UTC()
 
-			var ts_now = tq.Unix()
-			var ts_60 int64 = (ts_now / 60) * 60
+            var ts_now = tq.Unix()
+            var ts_60 int64 = (ts_now / 60) * 60
             if TS == 0 {
                 TS = ts_60
-				TS_first = ts_now
+                TS_first = ts_now
             } else if TS < ts_60 && ts_now < TS_first+10 {
-				TS = ts_60
-			}
+                TS = ts_60
+            }
 
             var qp = strconv.Itoa(int(*m.QueryPort))
             var qid = strconv.Itoa(int(msg.MsgHdr.Id))
@@ -299,18 +299,18 @@ func (o *StatOutput) RunOutputLoop() {
                 cq_any_name_p[name_p]++
             }
 
-			// Check if query matches any element in cq_INSPECT
-			for _, insp := range cq_INSPECT {
-				insp_m := false
-				if insp.mtype == 1 {
-					if strings.HasPrefix(name, insp.match) { insp_m = true }
-				} else if insp.mtype == 2 {
-					if strings.HasSuffix(name, insp.match) { insp_m = true }
-				}
-				if insp_m {
-					cq_CNT[ insp.name + "\t" + qa + "\t" + name ]++
-				}
-			}
+            // Check if query matches any element in cq_INSPECT
+            for _, insp := range cq_INSPECT {
+                insp_m := false
+                if insp.mtype == 1 {
+                    if strings.HasPrefix(name, insp.match) { insp_m = true }
+                } else if insp.mtype == 2 {
+                    if strings.HasSuffix(name, insp.match) { insp_m = true }
+                }
+                if insp_m {
+                    cq_CNT[ insp.name + "\t" + qa + "\t" + name ]++
+                }
+            }
 
 
 		case Message_CLIENT_RESPONSE:
